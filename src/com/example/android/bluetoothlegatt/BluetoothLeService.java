@@ -83,6 +83,7 @@ public class BluetoothLeService extends Service {
                 Log.i(TAG, "Connected to GATT server.");
                 // Attempts to discover services after successful connection.
                 Log.i(TAG, "Attempting to start service discovery:" + mBluetoothGatt.discoverServices());
+                //System.out.println("ce shi rssi :" + gatt.readRemoteRssi());
 
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) { //接口中非连接状态
                 intentAction = ACTION_GATT_DISCONNECTED;
@@ -93,6 +94,12 @@ public class BluetoothLeService extends Service {
         }
 
         @Override
+		public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
+			//super.onReadRemoteRssi(gatt, rssi, status);
+			System.out.println("RSSI:" + rssi);
+		}
+
+		@Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
@@ -122,8 +129,7 @@ public class BluetoothLeService extends Service {
         sendBroadcast(intent); //发送广播
     }
 
-    private void broadcastUpdate(final String action,
-                                 final BluetoothGattCharacteristic characteristic) {
+    private void broadcastUpdate(final String action, final BluetoothGattCharacteristic characteristic) {
         final Intent intent = new Intent(action);
 
         // This is special handling for the Heart Rate Measurement profile.  Data parsing is
@@ -155,8 +161,9 @@ public class BluetoothLeService extends Service {
         sendBroadcast(intent);
     }
 
+    private final IBinder mBinder = new LocalBinder();
     public class LocalBinder extends Binder {
-        BluetoothLeService getService() {
+        BluetoothLeService getService() { //获取到BluetoothLeService
             return BluetoothLeService.this;
         }
     }
@@ -175,7 +182,6 @@ public class BluetoothLeService extends Service {
         return super.onUnbind(intent);
     }
 
-    private final IBinder mBinder = new LocalBinder();
 
     /**
      * Initializes a reference to the local Bluetooth adapter.
@@ -183,8 +189,7 @@ public class BluetoothLeService extends Service {
      * @return Return true if the initialization is successful.
      */
     public boolean initialize() {
-        // For API level 18 and above, get a reference to BluetoothAdapter through
-        // BluetoothManager.
+        // For API level 18 and above, get a reference to BluetoothAdapter through BluetoothManager.
         if (mBluetoothManager == null) {
             mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
             if (mBluetoothManager == null) {
@@ -198,7 +203,6 @@ public class BluetoothLeService extends Service {
             Log.e(TAG, "Unable to obtain a BluetoothAdapter.");
             return false;
         }
-
         return true;
     }
 
@@ -238,6 +242,12 @@ public class BluetoothLeService extends Service {
         // We want to directly connect to the device, so we are setting the autoConnect
         // parameter to false.
         mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
+        
+        
+        if(mBluetoothGatt.readRemoteRssi()){
+        	System.out.println("successful");
+        }
+        
         Log.d(TAG, "Trying to create a new connection.");
         mBluetoothDeviceAddress = address;
         mConnectionState = STATE_CONNECTING;

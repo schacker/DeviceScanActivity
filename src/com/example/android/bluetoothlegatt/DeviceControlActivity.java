@@ -73,7 +73,7 @@ public class DeviceControlActivity extends Activity {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder service) {
             mBluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
-            if (!mBluetoothLeService.initialize()) {
+            if (!mBluetoothLeService.initialize()) { //≥ı ºªØ≥Ã–Ú
                 Log.e(TAG, "Unable to initialize Bluetooth");
                 finish();
             }
@@ -98,6 +98,8 @@ public class DeviceControlActivity extends Activity {
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
             if(BluetoothDevice.ACTION_FOUND.equals(action)){
+            	//Log.i("RSSI", rssi);
+            	System.out.println("Control RSSI:" + rssi);
             	BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
             	if(device.getBondState() != BluetoothDevice.BOND_BONDED){
             		rssi = intent.getExtras().getShort(BluetoothDevice.EXTRA_RSSI);
