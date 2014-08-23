@@ -95,8 +95,8 @@ public class BluetoothLeService extends Service {
 
         @Override
 		public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
-			//super.onReadRemoteRssi(gatt, rssi, status);
 			System.out.println("RSSI:" + rssi);
+			
 		}
 
 		@Override
@@ -239,13 +239,16 @@ public class BluetoothLeService extends Service {
             Log.w(TAG, "Device not found.  Unable to connect.");
             return false;
         }
-        // We want to directly connect to the device, so we are setting the autoConnect
-        // parameter to false.
+        /**
+         * 我们希望直接连接到蓝牙设备，所以我们设置自动连接参数为FALSE
+         */
         mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
         
         
         if(mBluetoothGatt.readRemoteRssi()){
-        	System.out.println("successful");
+        	System.out.println("-----------------RSSI值获取成功！");
+        } else {
+        	System.out.println("-----------------RSSI值获取失败！");
         }
         
         Log.d(TAG, "Trying to create a new connection.");

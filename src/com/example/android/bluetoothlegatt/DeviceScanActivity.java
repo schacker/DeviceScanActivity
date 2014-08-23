@@ -26,6 +26,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -37,27 +38,26 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
- * 负责扫描且列出可用的蓝牙设备
+ * 负责扫描且列出可用的蓝牙设备,extends自ListActivity，自身不用setContentView,Android自身会构造出一个全屏的列表
  */
 public class DeviceScanActivity extends ListActivity {
     private LeDeviceListAdapter mLeDeviceListAdapter; //蓝牙适配器设备列表
     private BluetoothAdapter mBluetoothAdapter; //当前蓝牙适配器 
     private boolean mScanning; //是否处于扫描状态
-    private Handler mHandler; //
-
+    public HashMap<String,Integer> rssiMap;
+    private CalcDis calcDis = new CalcDis();
     private static final int REQUEST_ENABLE_BT = 1;
     // 十秒钟后自动停止扫描
-    private static final long SCAN_PERIOD = 10000;
+    private static final long SCAN_PERIOD = 2000;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         //设置title
         getActionBar().setTitle(R.string.title_devices); 
-        mHandler = new Handler();
-
         // 判断设备是否支持低功耗蓝牙
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
@@ -75,10 +75,14 @@ public class DeviceScanActivity extends ListActivity {
             return;
         }
     }
-
+    /**
+     * 初始化菜单调用，右上角菜单，ActionBar
+     */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+    	//设置菜单
         getMenuInflater().inflate(R.menu.main, menu);
+        //设置菜单显示，是否处于扫描状态
         if (!mScanning) {
             menu.findItem(R.id.menu_stop).setVisible(false);
             menu.findItem(R.id.menu_scan).setVisible(true);
@@ -86,12 +90,14 @@ public class DeviceScanActivity extends ListActivity {
         } else {
             menu.findItem(R.id.menu_stop).setVisible(true);
             menu.findItem(R.id.menu_scan).setVisible(false);
-            menu.findItem(R.id.menu_refresh).setActionView(
-                    R.layout.actionbar_indeterminate_progress);
+            //设置扫描时的进度条（旋转）
+            menu.findItem(R.id.menu_refresh).setActionView(R.layout.actionbar_indeterminate_progress);
         }
         return true;
     }
-
+    /**
+     * 菜单被点击时调用，右上角菜单
+     */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -163,27 +169,44 @@ public class DeviceScanActivity extends ListActivity {
      * @param enable
      */
     private void scanLeDevice(final boolean enable) {
-        if (enable) {
+        /*if (enable) {
+        	rssiMap =  new HashMap<String, String>();
             // Stops scanning after a pre-defined scan period.
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     mScanning = false;
-                    mBluetoothAdapter.stopLeScan(mLeScanCallback);
+                    System.out.println("---设备扫描中---");
+                    mBluetoothAdapter.startLeScan(mLeScanCallback);
                     invalidateOptionsMenu();
                 }
             }, SCAN_PERIOD);
 
-            mScanning = true;
-            mBluetoothAdapter.startLeScan(mLeScanCallback);
-        } else {
+            //mScanning = true;
+            //mBluetoothAdapter.startLeScan(mLeScanCallback);
+        }*/ /*else {
             mScanning = false;
             mBluetoothAdapter.stopLeScan(mLeScanCallback);
-        }
+        }*/
+    	//用于存放不同蓝牙的RSSI值
+    	rssiMap =  new HashMap<String, Integer>();
+        final Handler handler = new Handler();
+        Runnable task = new Runnable() {
+			@Override
+			public void run() {
+				mBluetoothAdapter.stopLeScan(mLeScanCallback);
+				handler.postDelayed(this, SCAN_PERIOD);
+				Log.i("---延迟时间---", "延迟2秒执行线程");
+				System.out.println("---设备扫描中---");
+				mBluetoothAdapter.startLeScan(mLeScanCallback);
+				invalidateOptionsMenu();
+			}
+		};
+        handler.post(task);
         invalidateOptionsMenu();
     }
 
-    // Adapter for holding devices found through scanning.
+    // 如果使用LIstView或者其子类，必须使用Adapter
     private class LeDeviceListAdapter extends BaseAdapter {
         private ArrayList<BluetoothDevice> mLeDevices;
         private LayoutInflater mInflator;
@@ -203,11 +226,13 @@ public class DeviceScanActivity extends ListActivity {
         public BluetoothDevice getDevice(int position) {
             return mLeDevices.get(position);
         }
-
+        /**
+         * 清除
+         */
         public void clear() {
             mLeDevices.clear();
         }
-
+        
         @Override
         public int getCount() {
             return mLeDevices.size();
@@ -244,8 +269,9 @@ public class DeviceScanActivity extends ListActivity {
             }
             else
                 viewHolder.deviceName.setText(R.string.unknown_device);
-            viewHolder.deviceAddress.setText(device.getAddress());
-
+            String address = device.getAddress();
+            double dis = calcDis.dis(rssiMap.get(address));
+            viewHolder.deviceAddress.setText(address + " RSSI: "+ rssiMap.get(address) +" 距离："+ dis +"m");
             return view;
         }
     }
@@ -254,7 +280,8 @@ public class DeviceScanActivity extends ListActivity {
     private BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
         @Override
         public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
-        	System.out.println("Scan RSSI:" + rssi);
+        	System.out.println("设备回调 DeviceScan RSSI:" + rssi);
+        	rssiMap.put(device.getAddress(), (Integer)rssi);
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
