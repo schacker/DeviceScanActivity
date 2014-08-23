@@ -18,6 +18,7 @@ package com.example.android.bluetoothlegatt;
 
 import android.app.Activity;
 import android.app.ListActivity;
+import android.app.TaskStackBuilder;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -103,10 +104,18 @@ public class DeviceScanActivity extends ListActivity {
         switch (item.getItemId()) {
             case R.id.menu_scan:
                 mLeDeviceListAdapter.clear();
-                scanLeDevice(true);
+			try {
+				scanLeDevice(true);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
                 break;
             case R.id.menu_stop:
-                scanLeDevice(false);
+			try {
+				scanLeDevice(false);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
                 break;
         }
         return true;
@@ -124,11 +133,14 @@ public class DeviceScanActivity extends ListActivity {
                 startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
             }
         }
-
         // Initializes list view adapter.
         mLeDeviceListAdapter = new LeDeviceListAdapter();
         setListAdapter(mLeDeviceListAdapter);
-        scanLeDevice(true);
+        try {
+			scanLeDevice(true);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
     }
 
     @Override
@@ -140,11 +152,15 @@ public class DeviceScanActivity extends ListActivity {
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
-
+    //设备进入休眠状态或跳转Activity
     @Override
     protected void onPause() {
         super.onPause();
-        scanLeDevice(false);
+        try {
+			scanLeDevice(false);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
         mLeDeviceListAdapter.clear();
     }
     //点击具体选项后，进入到DeviceControlActivity
@@ -167,8 +183,9 @@ public class DeviceScanActivity extends ListActivity {
     /**
      * 扫描蓝牙设备
      * @param enable
+     * @throws InterruptedException 
      */
-    private void scanLeDevice(final boolean enable) {
+    private void scanLeDevice(final boolean enable) throws InterruptedException {
         /*if (enable) {
         	rssiMap =  new HashMap<String, String>();
             // Stops scanning after a pre-defined scan period.
@@ -189,9 +206,8 @@ public class DeviceScanActivity extends ListActivity {
             mBluetoothAdapter.stopLeScan(mLeScanCallback);
         }*/
     	//用于存放不同蓝牙的RSSI值
-    	rssiMap =  new HashMap<String, Integer>();
-        final Handler handler = new Handler();
-        Runnable task = new Runnable() {
+    	final Handler handler = new Handler();
+    	Runnable task = new Runnable() {
 			@Override
 			public void run() {
 				mBluetoothAdapter.stopLeScan(mLeScanCallback);
@@ -202,7 +218,17 @@ public class DeviceScanActivity extends ListActivity {
 				invalidateOptionsMenu();
 			}
 		};
-        handler.post(task);
+    	if(enable){
+    		rssiMap =  new HashMap<String, Integer>();
+    		handler.post(task);
+    	}else{
+    		mScanning = false;
+    		if(null != task){
+    			handler.removeCallbacks(task);
+    			task.wait();
+    		}
+    		//invalidateOptionsMenu();
+    	}
         invalidateOptionsMenu();
     }
 
@@ -270,7 +296,10 @@ public class DeviceScanActivity extends ListActivity {
             else
                 viewHolder.deviceName.setText(R.string.unknown_device);
             String address = device.getAddress();
-            double dis = calcDis.dis(rssiMap.get(address));
+            String dis = "暂无";
+            if(!rssiMap.isEmpty()){
+            	dis = calcDis.dis(rssiMap.get(address));
+            }
             viewHolder.deviceAddress.setText(address + " RSSI: "+ rssiMap.get(address) +" 距离："+ dis +"m");
             return view;
         }

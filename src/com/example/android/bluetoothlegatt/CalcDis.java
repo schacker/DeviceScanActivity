@@ -1,5 +1,6 @@
 package com.example.android.bluetoothlegatt;
 
+import java.text.DecimalFormat;
 import com.example.android.impl.CalcDisImpl;
 
 /**
@@ -10,9 +11,11 @@ import com.example.android.impl.CalcDisImpl;
 public class CalcDis implements CalcDisImpl {
 
 	@Override
-	public double dis(Integer rssi) {
+	public String dis(Integer rssi) {
 		if(null == rssi)
-			return -1;
-		return Math.pow(10, (Math.abs(rssi)-A)/B);
+			return "";
+		DecimalFormat df = new DecimalFormat("0.00");
+		return df.format(Math.pow(10, (Math.abs(rssi)-A)/B));
+		//return Math.pow(10, (Math.abs(rssi)-A)/B);
 	}
 }

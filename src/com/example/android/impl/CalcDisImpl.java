@@ -8,5 +8,5 @@ public interface CalcDisImpl {
 	 * @param rssi
 	 * @return
 	 */
-	public double dis(Integer rssi);
+	public String dis(Integer rssi);
 }
