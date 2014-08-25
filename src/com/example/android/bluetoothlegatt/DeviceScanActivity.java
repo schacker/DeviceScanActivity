@@ -51,7 +51,7 @@ public class DeviceScanActivity extends ListActivity {
     public HashMap<String,Integer> rssiMap;
     private CalcDis calcDis = new CalcDis();
     private static final int REQUEST_ENABLE_BT = 1;
-    // 十秒钟后自动停止扫描
+    // 两秒钟后自动扫描，启动线程循环扫描
     private static final long SCAN_PERIOD = 2000;
 
     @Override
@@ -207,6 +207,7 @@ public class DeviceScanActivity extends ListActivity {
         }*/
     	//用于存放不同蓝牙的RSSI值
     	final Handler handler = new Handler();
+    	rssiMap = new HashMap<String, Integer>();
     	Runnable task = new Runnable() {
 			@Override
 			public void run() {
@@ -215,10 +216,11 @@ public class DeviceScanActivity extends ListActivity {
 				Log.i("---延迟时间---", "延迟2秒执行线程");
 				System.out.println("---设备扫描中---");
 				mBluetoothAdapter.startLeScan(mLeScanCallback);
-				invalidateOptionsMenu();
+				//invalidateOptionsMenu();
 			}
 		};
-    	if(enable){
+		handler.post(task);
+    	/*if(enable){
     		rssiMap =  new HashMap<String, Integer>();
     		handler.post(task);
     	}else{
@@ -228,7 +230,7 @@ public class DeviceScanActivity extends ListActivity {
     			task.wait();
     		}
     		//invalidateOptionsMenu();
-    	}
+    	}*/
         invalidateOptionsMenu();
     }
 
@@ -298,7 +300,9 @@ public class DeviceScanActivity extends ListActivity {
             String address = device.getAddress();
             String dis = "暂无";
             if(!rssiMap.isEmpty()){
-            	dis = calcDis.dis(rssiMap.get(address));
+            	//dis = calcDis.dis(rssiMap.get(address));
+            	Integer rx = calcDis.rx(rssiMap.get(address));
+            	dis = calcDis.disO(rx);
             }
             viewHolder.deviceAddress.setText(address + " RSSI: "+ rssiMap.get(address) +" 距离："+ dis +"m");
             return view;
